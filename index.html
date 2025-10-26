@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crypto Tip Jar with Referrals</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <!-- FIXED: Use cdnjs instead of old ethers CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -184,11 +185,11 @@
             <p class="subtitle">Send tips with ETH • Earn 10% referral rewards forever</p>
             
             <div id="status" class="status">
-                👛 Connect your wallet to get started
+                👛 Connect your wallet to get started (MetaMask, Rabby, or any Web3 wallet)
             </div>
             
             <button id="connectBtn" onclick="connectWallet()">
-                Connect MetaMask
+                Connect Wallet
             </button>
         </div>
         
@@ -243,6 +244,19 @@
     </div>
 
     <script>
+        // Wait for ethers to load before running anything
+        window.addEventListener('load', function() {
+            // Check if ethers loaded correctly
+            if (typeof ethers === 'undefined') {
+                document.getElementById('status').innerHTML = '❌ Failed to load ethers.js library. Please refresh the page.';
+                document.getElementById('status').className = 'status error';
+                return;
+            }
+            
+            console.log('Ethers.js loaded successfully:', ethers.version);
+            initializeDApp();
+        });
+        
         // Contract details
         const CONTRACT_ADDRESS = "0x2df91456375c40eece0717f1a8e5f1489bb219b4";
         
@@ -262,21 +276,41 @@
         let contract;
         let userAddress;
         
-        // Connect to MetaMask
+        function initializeDApp() {
+            // Check if already connected on page load
+            if (typeof window.ethereum !== 'undefined') {
+                window.ethereum.request({ method: 'eth_accounts' })
+                    .then(accounts => {
+                        if (accounts.length > 0) {
+                            connectWallet();
+                        }
+                    })
+                    .catch(err => console.error('Error checking accounts:', err));
+            }
+        }
+        
+        // Connect to wallet (works with MetaMask, Rabby, and other Web3 wallets)
         async function connectWallet() {
             try {
                 if (typeof window.ethereum === 'undefined') {
-                    updateStatus('❌ Please install MetaMask to use this dApp', 'error');
+                    updateStatus('❌ Please install MetaMask or Rabby Wallet to use this dApp', 'error');
                     return;
                 }
                 
-                // Request account access
+                // Request account access (works with Rabby and MetaMask)
                 await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
                 // Create provider and signer
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 signer = provider.getSigner();
                 userAddress = await signer.getAddress();
+                
+                // Check if we're on the right network (Ethereum Mainnet = 1)
+                const network = await provider.getNetwork();
+                if (network.chainId !== 1) {
+                    updateStatus('⚠️ Please switch to Ethereum Mainnet in your wallet', 'error');
+                    return;
+                }
                 
                 // Create contract instance
                 contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
@@ -347,12 +381,9 @@
                     return;
                 }
                 
-                updateStatus('⏳ Sending tip... Please confirm in MetaMask', 'status');
+                updateStatus('⏳ Sending tip... Please confirm in your wallet', 'status');
                 
                 const value = ethers.utils.parseEther(amount);
-                
-                // Check if user has referrer set
-                const currentRef = await contract.referrers(userAddress);
                 
                 // Send tip
                 const tx = await contract.tip(message, { value: value });
@@ -372,15 +403,25 @@
                 
             } catch (error) {
                 console.error(error);
-                updateStatus('❌ Transaction failed: ' + error.message, 'error');
+                if (error.code === 4001) {
+                    updateStatus('❌ Transaction rejected by user', 'error');
+                } else {
+                    updateStatus('❌ Transaction failed: ' + error.message, 'error');
+                }
             }
         }
         
         // Copy referral link
         function copyReferralLink() {
             const link = document.getElementById('referralLink').textContent;
-            navigator.clipboard.writeText(link);
-            alert('✅ Referral link copied to clipboard!');
+            navigator.clipboard.writeText(link)
+                .then(() => {
+                    alert('✅ Referral link copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy:', err);
+                    alert('Failed to copy link. Please copy manually.');
+                });
         }
         
         // Update status message
@@ -390,15 +431,20 @@
             statusEl.className = 'status ' + type;
         }
         
-        // Check if already connected on page load
-        window.addEventListener('load', async () => {
-            if (typeof window.ethereum !== 'undefined') {
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        // Listen for account changes (works with both MetaMask and Rabby)
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', function (accounts) {
                 if (accounts.length > 0) {
-                    connectWallet();
+                    window.location.reload();
+                } else {
+                    updateStatus('👛 Please connect your wallet', 'error');
                 }
-            }
-        });
+            });
+            
+            window.ethereum.on('chainChanged', function (chainId) {
+                window.location.reload();
+            });
+        }
     </script>
 </body>
 </html>

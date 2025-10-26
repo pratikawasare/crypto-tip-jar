@@ -3,346 +3,402 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BTC Predictor v12 - Live 24/7</title>
+    <title>Crypto Tip Jar with Referrals</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             padding: 20px;
         }
         
         .container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
         
         h1 {
-            text-align: center;
-            color: #1e3c72;
+            color: #333;
             margin-bottom: 10px;
-            font-size: 32px;
+            font-size: 2.5em;
         }
         
-        .version {
-            text-align: center;
+        .subtitle {
             color: #666;
-            font-size: 14px;
             margin-bottom: 30px;
         }
         
-        .price-box {
+        button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .price-label {
-            font-size: 14px;
-            opacity: 0.9;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
             margin-bottom: 10px;
         }
         
-        .price-value {
-            font-size: 48px;
-            font-weight: bold;
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
         }
         
-        .prediction-box {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 15px;
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .status {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .tip-amounts {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
             margin-bottom: 20px;
         }
         
-        .prediction-label {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 10px;
+        .tip-btn {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            padding: 10px;
         }
         
-        .prediction-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #1e3c72;
-        }
-        
-        .regime {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        
-        .regime.ranging {
-            background: #ffc107;
-            color: #000;
-        }
-        
-        .regime.trending {
-            background: #28a745;
+        .tip-btn:hover {
+            background: #667eea;
             color: white;
         }
         
         .stats {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             margin-top: 20px;
         }
         
         .stat-box {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-        }
-        
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
         }
         
         .stat-value {
             font-size: 24px;
             font-weight: bold;
-            color: #1e3c72;
+            color: #667eea;
+            margin-bottom: 5px;
         }
         
-        .status {
-            text-align: center;
-            padding: 15px;
-            background: #e3f2fd;
-            border-radius: 10px;
-            margin-top: 20px;
+        .stat-label {
             font-size: 14px;
-            color: #1976d2;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
             color: #666;
         }
         
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .error {
-            background: #ffebee;
-            color: #c62828;
+        .referral-link {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
             padding: 15px;
-            border-radius: 10px;
+            border-radius: 8px;
             margin-top: 20px;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            background: #ffc107;
+            color: #333;
+            margin-top: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .emoji {
+            font-size: 48px;
             text-align: center;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 BTC Predictor</h1>
-        <div class="version">v12.0 Ultimate - Live 24/7 on Vercel</div>
-        
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Fetching Bitcoin data...</p>
-        </div>
-        
-        <div id="content" style="display: none;">
-            <div class="price-box">
-                <div class="price-label">Current Bitcoin Price</div>
-                <div class="price-value" id="currentPrice">$--</div>
+        <div class="card">
+            <div class="emoji">💸</div>
+            <h1>Crypto Tip Jar</h1>
+            <p class="subtitle">Send tips with ETH • Earn 10% referral rewards forever</p>
+            
+            <div id="status" class="status">
+                👛 Connect your wallet to get started
             </div>
             
-            <div class="prediction-box">
-                <div class="prediction-label">5-Minute Prediction</div>
-                <div class="prediction-value" id="predictedPrice">$--</div>
-                <div class="prediction-label" style="margin-top: 10px;">
-                    Direction: <span id="direction" style="font-weight: bold;">--</span>
-                </div>
-                <span id="regime" class="regime ranging">RANGING</span>
+            <button id="connectBtn" onclick="connectWallet()">
+                Connect MetaMask
+            </button>
+        </div>
+        
+        <div class="card" id="tipSection" style="display: none;">
+            <h2>💰 Send a Tip</h2>
+            
+            <div class="tip-amounts">
+                <button class="tip-btn" onclick="setAmount('0.001')">0.001 ETH</button>
+                <button class="tip-btn" onclick="setAmount('0.01')">0.01 ETH</button>
+                <button class="tip-btn" onclick="setAmount('0.1')">0.1 ETH</button>
             </div>
+            
+            <label>Amount (ETH)</label>
+            <input type="number" id="tipAmount" placeholder="0.01" step="0.001" min="0.001">
+            
+            <label>Message (Optional)</label>
+            <input type="text" id="tipMessage" placeholder="Thanks for the awesome content!">
+            
+            <button onclick="sendTip()">Send Tip 🚀</button>
+        </div>
+        
+        <div class="card" id="referralSection" style="display: none;">
+            <h2>🎁 Your Referral Link</h2>
+            <p class="subtitle">Share this link and earn 10% commission on all tips forever!</p>
+            
+            <div class="referral-link">
+                <strong>Your Referral Link:</strong><br>
+                <span id="referralLink">-</span>
+            </div>
+            
+            <button class="copy-btn" onclick="copyReferralLink()">📋 Copy Link</button>
             
             <div class="stats">
                 <div class="stat-box">
-                    <div class="stat-label">Accuracy</div>
-                    <div class="stat-value" id="accuracy">--%</div>
+                    <div class="stat-value" id="myTips">0</div>
+                    <div class="stat-label">My Tips Sent</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-label">Predictions</div>
-                    <div class="stat-value" id="totalPredictions">0</div>
+                    <div class="stat-value" id="myEarnings">0 ETH</div>
+                    <div class="stat-label">Referral Earnings</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="referralCount">0</div>
+                    <div class="stat-label">People Referred</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="totalTips">0 ETH</div>
+                    <div class="stat-label">Total Tips (All Users)</div>
                 </div>
             </div>
-            
-            <div class="status" id="status">
-                🧠 Collecting data for predictions...
-            </div>
-        </div>
-        
-        <div id="error" class="error" style="display: none;">
-            ⚠️ Unable to fetch Bitcoin data. Please refresh the page.
-        </div>
-        
-        <div class="footer">
-            Deployed on Vercel • Updates every 2 minutes • Free Forever
         </div>
     </div>
-    
+
     <script>
-        // Bitcoin Predictor Logic
-        const PYTH_ID = '0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
-        const UPDATE_INTERVAL = 120000; // 2 minutes
+        // Contract details
+        const CONTRACT_ADDRESS = "0x2df91456375c40eece0717f1a8e5f1489bb219b4";
         
-        let history = [];
-        let predictions = [];
-        let stats = {
-            totalPredictions: 0,
-            correctPredictions: 0,
-            accuracy: 0
-        };
+        // Contract ABI (only the functions we need)
+        const CONTRACT_ABI = [
+            "function tip(string calldata message) external payable",
+            "function tipWithReferral(address _referrer, string calldata message) external payable",
+            "function setReferrer(address _referrer) public",
+            "function getReferralStats(address user) external view returns (address referrer, uint256 totalTipped, uint256 earnedFromReferrals, uint256 peopleReferred)",
+            "function totalTips() external view returns (uint256)",
+            "function totalReferralsPaid() external view returns (uint256)",
+            "function referrers(address) external view returns (address)"
+        ];
         
-        // Fetch Bitcoin price from Pyth Network
-        async function fetchBTCPrice() {
+        let provider;
+        let signer;
+        let contract;
+        let userAddress;
+        
+        // Connect to MetaMask
+        async function connectWallet() {
             try {
-                const response = await fetch(`https://hermes.pyth.network/api/latest_price_feeds?ids[]=${PYTH_ID}`);
-                const data = await response.json();
-                
-                if (data && data[0] && data[0].price) {
-                    const price = parseFloat(data[0].price.price) * Math.pow(10, data[0].price.expo);
-                    return price;
+                if (typeof window.ethereum === 'undefined') {
+                    updateStatus('❌ Please install MetaMask to use this dApp', 'error');
+                    return;
                 }
                 
-                // Fallback to Binance
-                const binanceResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
-                const binanceData = await binanceResponse.json();
-                return parseFloat(binanceData.price);
-            } catch (error) {
-                console.error('Error fetching price:', error);
-                return null;
-            }
-        }
-        
-        // Calculate technical indicators
-        function calculateIndicators(prices) {
-            if (prices.length < 14) return null;
-            
-            const current = prices[prices.length - 1];
-            const previous = prices[prices.length - 2];
-            
-            // Simple trend
-            const trend = ((current - previous) / previous) * 100;
-            
-            // Simple momentum
-            const momentum = prices.length >= 5 ? 
-                ((current - prices[prices.length - 5]) / prices[prices.length - 5]) * 100 : 0;
-            
-            return { trend, momentum };
-        }
-        
-        // Make prediction
-        function makePrediction(currentPrice, indicators) {
-            if (!indicators) return null;
-            
-            // Simple prediction based on trend and momentum
-            const signal = (indicators.trend * 0.6) + (indicators.momentum * 0.4);
-            const predictedChange = signal * 0.5; // Dampen the prediction
-            const predictedPrice = currentPrice * (1 + predictedChange / 100);
-            
-            return {
-                price: predictedPrice,
-                change: predictedChange,
-                direction: predictedChange > 0 ? 'UP ⬆️' : 'DOWN ⬇️',
-                regime: Math.abs(signal) > 0.3 ? 'trending' : 'ranging'
-            };
-        }
-        
-        // Update UI
-        function updateUI(currentPrice, prediction) {
-            document.getElementById('currentPrice').textContent = `$${currentPrice.toFixed(2)}`;
-            
-            if (prediction) {
-                document.getElementById('predictedPrice').textContent = `$${prediction.price.toFixed(2)}`;
-                document.getElementById('direction').textContent = prediction.direction;
-                document.getElementById('direction').style.color = prediction.change > 0 ? '#28a745' : '#dc3545';
+                // Request account access
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
-                const regimeEl = document.getElementById('regime');
-                regimeEl.textContent = prediction.regime.toUpperCase();
-                regimeEl.className = `regime ${prediction.regime}`;
+                // Create provider and signer
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
                 
-                document.getElementById('status').textContent = '🚀 Active predictions running';
-            } else {
-                document.getElementById('status').textContent = '🧠 Collecting data for predictions...';
-            }
-            
-            document.getElementById('accuracy').textContent = stats.accuracy.toFixed(1) + '%';
-            document.getElementById('totalPredictions').textContent = stats.totalPredictions;
-        }
-        
-        // Main update function
-        async function update() {
-            try {
-                const price = await fetchBTCPrice();
+                // Create contract instance
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
                 
-                if (price) {
-                    history.push(price);
-                    if (history.length > 100) history.shift();
-                    
-                    const indicators = calculateIndicators(history);
-                    const prediction = indicators ? makePrediction(price, indicators) : null;
-                    
-                    updateUI(price, prediction);
-                    
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('content').style.display = 'block';
-                    document.getElementById('error').style.display = 'none';
-                } else {
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('error').style.display = 'block';
+                // Update UI
+                updateStatus(`✅ Connected: ${userAddress.substring(0, 6)}...${userAddress.substring(38)}`, 'connected');
+                document.getElementById('connectBtn').textContent = 'Connected ✓';
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('tipSection').style.display = 'block';
+                document.getElementById('referralSection').style.display = 'block';
+                
+                // Load user stats
+                await loadStats();
+                
+                // Check for referral in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const ref = urlParams.get('ref');
+                if (ref && ethers.utils.isAddress(ref)) {
+                    try {
+                        const currentRef = await contract.referrers(userAddress);
+                        if (currentRef === ethers.constants.AddressZero) {
+                            await contract.setReferrer(ref);
+                            updateStatus('🎉 Referrer set successfully!', 'connected');
+                        }
+                    } catch (error) {
+                        console.log('Referrer already set or error:', error);
+                    }
                 }
+                
+                // Generate referral link
+                const baseUrl = window.location.origin + window.location.pathname;
+                document.getElementById('referralLink').textContent = `${baseUrl}?ref=${userAddress}`;
+                
             } catch (error) {
-                console.error('Update error:', error);
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('error').style.display = 'block';
+                console.error(error);
+                updateStatus('❌ Failed to connect wallet: ' + error.message, 'error');
             }
         }
         
-        // Initialize
-        update();
-        setInterval(update, UPDATE_INTERVAL);
+        // Load user statistics
+        async function loadStats() {
+            try {
+                const stats = await contract.getReferralStats(userAddress);
+                const totalTips = await contract.totalTips();
+                
+                document.getElementById('myTips').textContent = stats.totalTipped.toString();
+                document.getElementById('myEarnings').textContent = ethers.utils.formatEther(stats.earnedFromReferrals) + ' ETH';
+                document.getElementById('referralCount').textContent = stats.peopleReferred.toString();
+                document.getElementById('totalTips').textContent = ethers.utils.formatEther(totalTips) + ' ETH';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        // Set tip amount
+        function setAmount(amount) {
+            document.getElementById('tipAmount').value = amount;
+        }
+        
+        // Send tip
+        async function sendTip() {
+            try {
+                const amount = document.getElementById('tipAmount').value;
+                const message = document.getElementById('tipMessage').value || "";
+                
+                if (!amount || parseFloat(amount) <= 0) {
+                    alert('Please enter a valid tip amount');
+                    return;
+                }
+                
+                updateStatus('⏳ Sending tip... Please confirm in MetaMask', 'status');
+                
+                const value = ethers.utils.parseEther(amount);
+                
+                // Check if user has referrer set
+                const currentRef = await contract.referrers(userAddress);
+                
+                // Send tip
+                const tx = await contract.tip(message, { value: value });
+                
+                updateStatus('⏳ Transaction submitted! Waiting for confirmation...', 'status');
+                
+                await tx.wait();
+                
+                updateStatus('✅ Tip sent successfully! 🎉', 'connected');
+                
+                // Clear inputs
+                document.getElementById('tipAmount').value = '';
+                document.getElementById('tipMessage').value = '';
+                
+                // Reload stats
+                await loadStats();
+                
+            } catch (error) {
+                console.error(error);
+                updateStatus('❌ Transaction failed: ' + error.message, 'error');
+            }
+        }
+        
+        // Copy referral link
+        function copyReferralLink() {
+            const link = document.getElementById('referralLink').textContent;
+            navigator.clipboard.writeText(link);
+            alert('✅ Referral link copied to clipboard!');
+        }
+        
+        // Update status message
+        function updateStatus(message, type = '') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status ' + type;
+        }
+        
+        // Check if already connected on page load
+        window.addEventListener('load', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    connectWallet();
+                }
+            }
+        });
     </script>
 </body>
 </html>
